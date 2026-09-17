@@ -28,7 +28,7 @@ a { color:inherit; text-decoration:none; }
 .home-page .home-main { max-width:none; display:block; }
 .home-page .hero { min-height:650px; padding-top:95px; padding-bottom:92px; grid-template-columns:minmax(0, 2.2fr) minmax(170px, 1fr); gap:10vw; }
 .home-page .hero-aside { align-self:center; }
-.home-page .hero h1 { font-size:clamp(3rem,5.5vw,5.2rem); line-height:.94; letter-spacing:-.04em; margin-bottom:28px; }
+.home-page .hero h1 { font-size:clamp(2.5rem,4vw,4.2rem); line-height:1; letter-spacing:-.04em; margin-bottom:24px; }
 .home-page .eyebrow { font-size:.68rem; letter-spacing:.06em; margin-bottom:26px; }
 .home-page .intro { font-size:1.08rem; line-height:1.55; }
 .home-page .hero-actions { gap:28px; margin-top:38px; }
@@ -41,23 +41,23 @@ a { color:inherit; text-decoration:none; }
 .home-page .caption { margin-top:14px; border-top:0; padding-top:0; }
 .home-page .home-band,
 .home-page .featured { max-width:1240px; padding-top:58px; padding-bottom:72px; }
-.home-page .large-copy { font-size:clamp(1.45rem,2.2vw,2.2rem); line-height:1.14; }
+.home-page .large-copy { font-size:clamp(1.2rem,1.7vw,1.8rem); line-height:1.2; }
 .home-page .now-meta { gap:15vw; margin-top:58px; }
 .home-page .now-meta p { font-size:.84rem; line-height:1.5; margin-top:10px; }
 .home-page .featured { padding-bottom:100px; }
 .home-page .work-row { min-height:92px; }
 .home-page .work-number,
 .home-page .work-type { font-size:.68rem; }
-.home-page .work-title { font-size:1.18rem; }
+.home-page .work-title { font-size:1.05rem; }
 .home-page .arrow { font-size:1.25rem; }
 
 @media (max-width:700px) {
 	.home-page .page-grid { display:block; padding-left:7vw; padding-right:7vw; }
 	.home-page .hero { min-height:auto; padding-top:70px; padding-bottom:70px; }
-	.home-page .hero h1 { font-size:clamp(3.2rem,12vw,4.6rem); }
+	.home-page .hero h1 { font-size:clamp(2.7rem,10vw,3.8rem); }
 	.home-page .hero-aside { margin-top:60px; }
 	.home-page .section-label { margin-bottom:27px; }
 	.home-page .now-meta { gap:10vw; }
 	.home-page .work-row { padding:14px 0; }
-	.home-page .work-title { font-size:1.12rem; }
+	.home-page .work-title { font-size:1.05rem; }
 }
