@@ -27,6 +27,7 @@ a { color:inherit; text-decoration:none; }
 .home-page .page-grid { grid-template-columns:minmax(150px, 1fr) minmax(0, 3fr); gap:6vw; max-width:1160px; }
 .home-page .site-footer { grid-template-columns:1fr 1fr 1fr; }
 .home-page .home-main { max-width:1160px; display:block; }
+.home-page .home-main > .page-grid { width:100%; max-width:100%; }
 .home-page .hero { min-height:650px; padding-top:95px; padding-bottom:92px; grid-template-columns:minmax(0, 2.2fr) minmax(170px, 1fr); gap:10vw; }
 .home-page .hero-aside { align-self:center; }
 .home-page .hero h1 { font-size:clamp(2.5rem,4vw,4.2rem); line-height:1; letter-spacing:-.04em; margin-bottom:24px; }
