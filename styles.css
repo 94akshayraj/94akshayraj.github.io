@@ -22,42 +22,42 @@ a { color:inherit; text-decoration:none; }
 .page-intro { padding-top:54px; padding-bottom:54px; }.page-intro h1 { font-size:clamp(2.5rem,4.2vw,3.9rem); }.research-section,.teaching-section,.cv-section { padding-top:34px; }.project-grid { display:grid; grid-template-columns:1.2fr 1fr; gap:24px; }.project-card { background:transparent; border-top:1px solid var(--ink); min-height:160px; padding:14px 0 0; display:flex; flex-direction:column; }.project-card-featured { background:transparent; color:var(--ink); }.project-index { font: .68rem 'DM Mono',monospace; color:var(--accent); }.project-card h2 { font:500 1.4rem/1.1 'Newsreader',serif; margin:20px 0 9px; }.project-card p { max-width:300px; color:var(--muted); font-size:.84rem; margin:0 0 14px; }.project-card-featured p { color:var(--muted); }.project-status { margin-top:auto; color:var(--muted); }.publication-list,.course-list,.cv-list { border-top:1px solid var(--line); }.publication,.course,.cv-row { display:grid; grid-template-columns:100px 1fr 20px; gap:20px; align-items:start; padding:14px 0; border-bottom:1px solid var(--line); }.publication h3,.course h2,.cv-row h2 { margin:0 0 4px; font:500 1.18rem/1.1 'Newsreader',serif; }.publication p,.course p,.cv-row p { margin:0; color:var(--muted); font-size:.8rem; }.publication a { color:var(--accent); }.teaching-section { padding-bottom:52px; }.course { grid-template-columns:120px 1fr 20px; }.course h2 { font-size:1.35rem; }.quote-section { padding-bottom:56px; }.quote-section blockquote { margin:0; max-width:720px; font:400 clamp(1.5rem,2.5vw,2.2rem)/1.18 'Newsreader',serif; }.cv-section { padding-bottom:22px; }.cv-row { grid-template-columns:120px 1fr; }.cv-row h2 { font-size:1.18rem; }.site-footer { border-top:1px solid var(--line); padding-top:18px; padding-bottom:22px; font-size:.64rem; color:var(--muted); display:grid; grid-template-columns:1fr 1fr 1fr; }.site-footer p { margin:0; }.site-footer a { color:var(--ink); text-align:right; }
 @media (max-width:700px) { .site-header { padding-top:21px; }.menu-toggle { display:block; }.site-nav { display:none; position:absolute; top:62px; right:5vw; background:var(--paper); border:1px solid var(--line); padding:14px 20px; z-index:2; flex-direction:column; gap:12px; }.site-nav.open { display:flex; }.home-main { display:block; }.page-grid { display:block; padding-left:7vw; padding-right:7vw; }.hero { min-height:auto; padding-top:42px; padding-bottom:44px; }.hero h1 { font-size:clamp(2.4rem,11vw,3.5rem); }.hero-aside { margin-top:34px; }.portrait { max-width:220px; margin-left:0; }.section-label { margin-bottom:20px; }.now-meta { gap:8vw; }.work-row { grid-template-columns:30px 1fr 18px; gap:10px; padding:10px 0; }.work-type { display:none; }.work-title { font-size:1.06rem; }.page-intro { padding-top:44px; padding-bottom:48px; }.page-intro h1 { font-size:clamp(2.4rem,11vw,3.5rem); }.project-grid { grid-template-columns:1fr; }.project-card { min-height:135px; }.publication,.course,.cv-row { grid-template-columns:78px 1fr 18px; gap:12px; }.publication h3,.course h2 { font-size:1.18rem; }.cv-row { grid-template-columns:78px 1fr; }.pdf-shell { width:100%; }.site-footer { display:flex; flex-wrap:wrap; gap:10px 24px; }.site-footer p:nth-child(2) { display:none; }.site-footer a { margin-left:auto; } }
 
-body:has(.home-main) { --paper:#f3f0e9; --ink:#1d3040; --muted:#6f7777; --line:#d9d8d1; --accent:#c45d43; --warm:#e5dfd2; }
-body:has(.home-main) .site-header { max-width:1240px; }
-body:has(.home-main) .page-grid { grid-template-columns:minmax(150px, 1fr) minmax(0, 3fr); gap:6vw; max-width:1240px; }
-body:has(.home-main) .home-main { max-width:none; display:block; }
-body:has(.home-main) .hero { min-height:650px; padding-top:95px; padding-bottom:92px; grid-template-columns:minmax(0, 2.2fr) minmax(170px, 1fr); gap:10vw; }
-body:has(.home-main) .hero-aside { align-self:center; }
-body:has(.home-main) .hero h1 { font-size:clamp(3.5rem,7.2vw,6.8rem); line-height:.91; letter-spacing:-.04em; margin-bottom:34px; }
-body:has(.home-main) .eyebrow { font-size:.68rem; letter-spacing:.06em; margin-bottom:26px; }
-body:has(.home-main) .intro { font-size:1.08rem; line-height:1.55; }
-body:has(.home-main) .hero-actions { gap:28px; margin-top:38px; }
-body:has(.home-main) .button { gap:22px; padding:13px 18px; font-size:.8rem; }
-body:has(.home-main) .button-dark { background:var(--ink); color:var(--paper); }
-body:has(.home-main) .button-dark span,
-body:has(.home-main) .text-link span { font-size:1.1rem; }
-body:has(.home-main) .text-link { padding-bottom:3px; font-size:.8rem; }
-body:has(.home-main) .portrait { max-width:290px; }
-body:has(.home-main) .caption { margin-top:14px; border-top:0; padding-top:0; }
-body:has(.home-main) .home-band,
-body:has(.home-main) .featured { max-width:1240px; padding-top:58px; padding-bottom:72px; }
-body:has(.home-main) .large-copy { font-size:clamp(1.8rem,3vw,3rem); line-height:1.08; }
-body:has(.home-main) .now-meta { gap:15vw; margin-top:58px; }
-body:has(.home-main) .now-meta p { font-size:.84rem; line-height:1.5; margin-top:10px; }
-body:has(.home-main) .featured { padding-bottom:100px; }
-body:has(.home-main) .work-row { min-height:92px; }
-body:has(.home-main) .work-number,
-body:has(.home-main) .work-type { font-size:.68rem; }
-body:has(.home-main) .work-title { font-size:1.45rem; }
-body:has(.home-main) .arrow { font-size:1.25rem; }
+.home-page { --paper:#f3f0e9; --ink:#1d3040; --muted:#6f7777; --line:#d9d8d1; --accent:#c45d43; --warm:#e5dfd2; }
+.home-page .site-header { max-width:1240px; }
+.home-page .page-grid { grid-template-columns:minmax(150px, 1fr) minmax(0, 3fr); gap:6vw; max-width:1240px; }
+.home-page .home-main { max-width:none; display:block; }
+.home-page .hero { min-height:650px; padding-top:95px; padding-bottom:92px; grid-template-columns:minmax(0, 2.2fr) minmax(170px, 1fr); gap:10vw; }
+.home-page .hero-aside { align-self:center; }
+.home-page .hero h1 { font-size:clamp(3.5rem,7.2vw,6.8rem); line-height:.91; letter-spacing:-.04em; margin-bottom:34px; }
+.home-page .eyebrow { font-size:.68rem; letter-spacing:.06em; margin-bottom:26px; }
+.home-page .intro { font-size:1.08rem; line-height:1.55; }
+.home-page .hero-actions { gap:28px; margin-top:38px; }
+.home-page .button { gap:22px; padding:13px 18px; font-size:.8rem; }
+.home-page .button-dark { background:var(--ink); color:var(--paper); }
+.home-page .button-dark span,
+.home-page .text-link span { font-size:1.1rem; }
+.home-page .text-link { padding-bottom:3px; font-size:.8rem; }
+.home-page .portrait { max-width:290px; }
+.home-page .caption { margin-top:14px; border-top:0; padding-top:0; }
+.home-page .home-band,
+.home-page .featured { max-width:1240px; padding-top:58px; padding-bottom:72px; }
+.home-page .large-copy { font-size:clamp(1.8rem,3vw,3rem); line-height:1.08; }
+.home-page .now-meta { gap:15vw; margin-top:58px; }
+.home-page .now-meta p { font-size:.84rem; line-height:1.5; margin-top:10px; }
+.home-page .featured { padding-bottom:100px; }
+.home-page .work-row { min-height:92px; }
+.home-page .work-number,
+.home-page .work-type { font-size:.68rem; }
+.home-page .work-title { font-size:1.45rem; }
+.home-page .arrow { font-size:1.25rem; }
 
 @media (max-width:700px) {
-	body:has(.home-main) .page-grid { display:block; padding-left:7vw; padding-right:7vw; }
-	body:has(.home-main) .hero { min-height:auto; padding-top:70px; padding-bottom:70px; }
-	body:has(.home-main) .hero h1 { font-size:clamp(3.7rem,16vw,5.7rem); }
-	body:has(.home-main) .hero-aside { margin-top:60px; }
-	body:has(.home-main) .section-label { margin-bottom:27px; }
-	body:has(.home-main) .now-meta { gap:10vw; }
-	body:has(.home-main) .work-row { padding:14px 0; }
-	body:has(.home-main) .work-title { font-size:1.25rem; }
+	.home-page .page-grid { display:block; padding-left:7vw; padding-right:7vw; }
+	.home-page .hero { min-height:auto; padding-top:70px; padding-bottom:70px; }
+	.home-page .hero h1 { font-size:clamp(3.7rem,16vw,5.7rem); }
+	.home-page .hero-aside { margin-top:60px; }
+	.home-page .section-label { margin-bottom:27px; }
+	.home-page .now-meta { gap:10vw; }
+	.home-page .work-row { padding:14px 0; }
+	.home-page .work-title { font-size:1.25rem; }
 }
