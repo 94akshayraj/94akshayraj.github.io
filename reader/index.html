@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI PDF Reader</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<style>
+*{box-sizing:border-box}[hidden]{display:none!important}
+body[data-theme=day]{--desk:#dde3df;--chrome:#f5f7f5;--ink:#1c2523;--mute:#66726f;--line:#c9d1cd;--accent:#25666b;--pagebg:#fff}
+body[data-theme=paper]{--desk:#d9d3c5;--chrome:#ece7da;--ink:#2b2620;--mute:#7a7264;--line:#c8c0ae;--accent:#3d5a45;--pagebg:#f7f2e6}
+body[data-theme=night]{--desk:#12171a;--chrome:#1a2125;--ink:#dbe3e0;--mute:#8a9895;--line:#2c373c;--accent:#6fc2bd;--pagebg:#171b1d}
+body{margin:0;height:100vh;height:100dvh;overflow:hidden;background:var(--desk);color:var(--ink);font:15px/1.4 system-ui,sans-serif}
+#bar{position:fixed;top:0;left:0;right:0;height:48px;z-index:5;display:flex;align-items:center;gap:8px;padding:0 12px;background:var(--chrome);border-bottom:1px solid var(--line)}
+#bar button,.btn{font:inherit;color:var(--ink);background:transparent;border:1px solid var(--line);border-radius:8px;padding:5px 11px;cursor:pointer}
+#bar button:hover,.btn:hover{background:var(--desk)}
+#bar select{font:inherit;color:var(--ink);background:transparent;border:1px solid var(--line);border-radius:8px;padding:5px 8px;max-width:30vw}
+#status{margin-left:auto;color:var(--mute);font-size:13px}
+#viewer{position:absolute;inset:0;overflow:auto;padding:64px 24px 80px;text-align:center;transition:padding-right .25s}
+body.panel #viewer{padding-right:calc(33.333vw + 24px)}
+.page{position:relative;margin:0 auto 18px;background:var(--pagebg);box-shadow:0 2px 12px rgba(0,0,0,.18)}
+.page canvas{display:block}
+body[data-theme=paper] .page canvas{filter:sepia(.3) contrast(.95)}
+body[data-theme=night] .page canvas{filter:invert(.9) hue-rotate(180deg)}
+.textLayer{position:absolute;inset:0;overflow:hidden;line-height:1;z-index:2}
+.textLayer span{color:transparent;position:absolute;white-space:pre;cursor:text;transform-origin:0 0}
+.textLayer ::selection{background:rgba(255,200,0,.5)}
+.hlLayer{position:absolute;inset:0;z-index:1;pointer-events:none}
+.hl{position:absolute;background:rgba(255,208,0,.38);border-radius:2px}
+#empty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center;color:var(--mute);padding:24px}
+#empty h1{margin:0;color:var(--ink);font:600 28px/1.2 Charter,'Iowan Old Style',Georgia,serif}
+#empty p{margin:0;max-width:440px;line-height:1.6}
+body.has-doc #empty{display:none}
+#side{position:fixed;top:0;right:0;bottom:0;width:33.333vw;z-index:7;background:var(--chrome);border-left:1px solid var(--line);display:flex;flex-direction:column;transform:translateX(102%);transition:transform .25s}
+body.panel #side{transform:none}
+.tabs{display:flex;gap:2px;padding:10px 16px 0;border-bottom:1px solid var(--line)}
+.tabs>button:not(#close){background:none;border:0;border-bottom:2px solid transparent;padding:8px 12px;color:var(--mute);font:600 14px system-ui;cursor:pointer}
+.tabs>button.on{color:var(--ink);border-color:var(--accent)}
+#close{margin-left:auto;border:0;background:none;color:var(--mute);font-size:26px;line-height:1;cursor:pointer}
+.pane{flex:1;min-height:0;overflow:auto;padding:22px 28px 32px}
+#paneChat{display:flex;flex-direction:column;padding:0;overflow:hidden}
+.sec{margin:0 0 24px}.lbl{font:600 13px system-ui;color:var(--mute);margin:0 0 8px}
+.eli{background:color-mix(in srgb,var(--accent) 13%,transparent);border-radius:14px;padding:16px 18px 18px}
+.eli .lbl{display:inline-block;background:var(--accent);color:var(--chrome);border-radius:99px;padding:2px 11px;margin-bottom:10px}
+.body{font:17px/1.75 Charter,'Iowan Old Style',Georgia,serif}.body.muted{color:var(--mute)}
+.eli .body{font-size:21px;line-height:1.5}
+.body p{margin:0 0 6px}.body ul{margin:0;padding-left:20px}.body li{margin:0 0 8px;font-size:16px;line-height:1.65}
+.k{font-weight:700;color:var(--accent);background:linear-gradient(transparent 62%,color-mix(in srgb,var(--accent) 24%,transparent) 62%)}
+code{font:14px ui-monospace,Consolas,monospace;background:var(--desk);padding:1px 5px;border-radius:5px}
+#chatLog{flex:1;overflow:auto;padding:18px 22px;display:flex;flex-direction:column;gap:14px}
+.hint{color:var(--mute);font-size:14px;line-height:1.6}
+.msg{max-width:94%}.msg.u{align-self:flex-end;background:var(--accent);color:var(--chrome);padding:8px 13px;border-radius:14px 14px 4px 14px}
+#ctxChip{display:flex;align-items:center;gap:8px;margin:0 16px 8px;padding:6px 10px;background:color-mix(in srgb,var(--accent) 12%,transparent);border-radius:10px;font-size:13px;color:var(--mute)}
+#ctxText{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#ctxChip button{border:0;background:none;color:var(--mute);font-size:18px;cursor:pointer}
+#composer{display:flex;gap:8px;padding:12px 16px;border-top:1px solid var(--line)}
+#composer textarea{flex:1;resize:none;height:44px;font:15px system-ui;color:var(--ink);background:var(--desk);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+#composer button,#modal .go{background:var(--accent);color:var(--chrome);border:0;border-radius:10px;padding:8px 16px;font:600 14px system-ui;cursor:pointer}
+#tip{position:fixed;z-index:20;display:flex;gap:2px;background:var(--ink);color:var(--chrome);border-radius:10px;padding:4px;box-shadow:0 6px 20px rgba(0,0,0,.3)}
+#tip button{background:none;border:0;color:inherit;font:600 13px system-ui;padding:7px 11px;border-radius:7px;cursor:pointer}
+#tip button:hover{background:rgba(128,128,128,.35)}
+#modal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:30;padding:12px}
+#modal .card{background:var(--chrome);color:var(--ink);border-radius:12px;padding:20px;max-width:480px;width:100%;max-height:92vh;overflow:auto;line-height:1.5}
+#modal input{width:100%;padding:8px;margin:4px 0 10px;font-size:14px;color:var(--ink);background:var(--desk);border:1px solid var(--line);border-radius:8px}
+#modal small{color:var(--mute);display:block;margin-bottom:10px}#modal a{color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media(max-width:1100px){body.panel #viewer{padding-right:24px;padding-bottom:46vh}#side{top:auto;left:0;width:100%;height:44vh;border-left:0;border-top:1px solid var(--line);transform:translateY(102%)}}
+@media(max-width:600px){#bar{gap:6px;padding:0 8px}#bar button,.btn{padding:5px 8px}}
+</style>
+</head>
+<body data-theme="day">
+<header id="bar">
+  <label class="btn">Open PDF<input type="file" id="file" accept="application/pdf" hidden></label>
+  <select id="docs"><option value="">Library</option></select>
+  <button id="chatBtn">Chat</button><button id="theme">Day</button><button id="keyBtn">Key</button>
+  <span id="status"></span>
+</header>
+<main id="viewer"></main>
+<div id="empty"><h1>Open a book or paper</h1>
+  <p>Select any passage, choose Explain, and get a short gloss plus a deeper expert reading tied to the whole document. Highlight it, or ask the chat about it.</p>
+  <label class="btn">Open PDF<input type="file" id="file2" accept="application/pdf" hidden></label>
+  <p style="font-size:13px">or drop a PDF anywhere on this page. Your PDFs stay in your browser.</p></div>
+<div id="tip" hidden><button id="tEx">&#10024; Explain</button><button id="tHl">&#128397; Highlight</button><button id="tRm" hidden>&#10005; Remove</button><button id="tAsk">&#128172; Ask</button></div>
+<aside id="side">
+  <div class="tabs"><button id="tabE" class="on">Explain</button><button id="tabC">Chat</button><button id="close" title="Close (Esc)">&times;</button></div>
+  <div class="pane" id="paneExplain">
+    <section class="sec eli"><div class="lbl">ELI5</div><div class="body muted" id="eliBody"></div></section>
+    <section class="sec"><div class="lbl">Expert explanation</div><div class="body" id="proBody"></div></section>
+  </div>
+  <div class="pane" id="paneChat" hidden>
+    <div id="chatLog"></div>
+    <div id="ctxChip" hidden><span id="ctxText"></span><button id="ctxX" title="Remove selected text">&times;</button></div>
+    <div id="composer"><textarea id="chatIn" placeholder="Ask about the text, or anything in linguistics..."></textarea><button id="chatSend">Send</button></div>
+  </div>
+</aside>
+<div id="modal" hidden><div class="card">
+  <h3 style="margin-top:0">Your free Gemini key</h3>
+  <p>This app uses Google's Gemini AI. To keep it free for everyone, you use <b>your own</b> free key: open <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a>, create a key, and paste it here.</p>
+  <input type="password" id="key" placeholder="Paste your Gemini API key" autocomplete="off">
+  <small>The key is saved only in this browser and sent only to Google. Your PDFs are stored only in this browser; the document text and your questions are sent to Google's Gemini to write answers. On the free tier Google may use that text to improve its products, so only use documents you are allowed to share.</small>
+  Model (change if Google renames it): <input type="text" id="model">
+  <button class="go" id="saveKey">Save</button> <button class="btn" id="closeKey">Close</button>
+</div></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+const $=id=>document.getElementById(id),V=$("viewer"),sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const LS={get(k,d){try{const v=localStorage.getItem(k);return v===null?d:v}catch{return d}},set(k,v){try{localStorage.setItem(k,v)}catch{}}};
+const cfg=()=>({key:LS.get("gkey",""),model:LS.get("gmodel","gemini-3.5-flash-lite")});
+const FALLBACK=["gemini-3.5-flash-lite","gemini-3.1-flash-lite"],FULL=600000;
+let cur=null,pdf=null,SCALE=1.4,hls=[],pending=null,chat=[],ctx=null,busy=false,ctrl=null,md=false;
+const setStatus=t=>{$("status").textContent=t};
+
+/* ---------- theme ---------- */
+const THEMES=["day","paper","night"];
+function setTheme(t){document.body.dataset.theme=t;LS.set("theme",t);$("theme").textContent=t[0].toUpperCase()+t.slice(1)}
+setTheme(THEMES.includes(LS.get("theme","day"))?LS.get("theme","day"):"day");
+$("theme").onclick=()=>setTheme(THEMES[(THEMES.indexOf(document.body.dataset.theme)+1)%3]);
+
+/* ---------- storage: PDFs live in this browser (IndexedDB) ---------- */
+const idb=()=>new Promise((res,rej)=>{const r=indexedDB.open("aipdf",1);r.onupgradeneeded=()=>r.result.createObjectStore("docs",{keyPath:"id"});r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)});
+const tx=async(m,f)=>{const db=await idb();return new Promise((res,rej)=>{const t=db.transaction("docs",m),q=f(t.objectStore("docs"));t.oncomplete=()=>res(q&&q.result);t.onerror=()=>rej(t.error)})};
+const getLib=()=>{try{return JSON.parse(LS.get("lib","[]"))}catch{return[]}};
+function refreshLib(){const s=$("docs");s.innerHTML="";const o=document.createElement("option");o.value="";o.textContent="Library";s.appendChild(o);
+  for(const d of getLib()){const e=document.createElement("option");e.value=d.id;e.textContent=d.name;s.appendChild(e)}if(cur)s.value=cur.id}
+async function hash(buf){try{const h=await crypto.subtle.digest("SHA-256",buf);return[...new Uint8Array(h)].slice(0,8).map(b=>b.toString(16).padStart(2,"0")).join("")}catch{return"f"+buf.byteLength}}
+async function extract(p){const out=[];for(let i=1;i<=p.numPages;i++){const pg=await p.getPage(i),tc=await pg.getTextContent();let t="";
+  for(const it of tc.items)t+=it.str+(it.hasEOL?"\n":" ");out.push(t.replace(/[ \t]+/g," "));pg.cleanup();if(i%10===0)setStatus(`Reading text ${i}/${p.numPages}`)}return out}
+async function openBuf(buf,name){
+  const id=await hash(buf);let d=null;try{d=await tx("readonly",s=>s.get(id))}catch{}
+  pdf=await pdfjsLib.getDocument({data:buf.slice(0)}).promise;
+  hls=JSON.parse(LS.get("hl:"+id,"[]"));chat=[];ctx=null;renderChat();renderCtx();hideTip();closePanel();
+  cur={id,name,pages:d?d.pages:null};await layout();document.body.classList.add("has-doc");
+  if(!d){setStatus("Reading text...");const pages=await extract(pdf);cur.pages=pages;
+    try{await tx("readwrite",s=>s.put({id,name,pages,blob:new Blob([buf],{type:"application/pdf"})}))}catch{}}
+  const l=getLib().filter(x=>x.id!==id);l.unshift({id,name});LS.set("lib",JSON.stringify(l.slice(0,50)));refreshLib();
+  setStatus(cur.pages.join("").trim().length<300?"No readable text (scanned PDF?)":"Ready");
+}
+$("file").onchange=$("file2").onchange=async e=>{const f=e.target.files[0];if(f)try{await openBuf(await f.arrayBuffer(),f.name)}catch(x){setStatus("Error: "+x.message)}e.target.value=""};
+$("docs").onchange=async e=>{if(!e.target.value)return;try{const d=await tx("readonly",s=>s.get(e.target.value));
+  if(!d)return setStatus("That book is no longer stored in this browser.");await openBuf(await d.blob.arrayBuffer(),d.name)}catch(x){setStatus("Error: "+x.message)}};
+document.addEventListener("dragover",e=>e.preventDefault());
+document.addEventListener("drop",async e=>{e.preventDefault();const f=e.dataTransfer.files[0];if(f&&f.type==="application/pdf")try{await openBuf(await f.arrayBuffer(),f.name)}catch(x){setStatus("Error: "+x.message)}});
+
+/* ---------- viewer ---------- */
+async function layout(){
+  V.innerHTML="";const first=await pdf.getPage(1),w1=first.getViewport({scale:1}).width,vw=V.clientWidth;
+  SCALE=Math.max(.6,Math.min(900,vw>1100?vw*2/3-56:vw-32)/w1);const vp=first.getViewport({scale:SCALE});
+  const ob=new IntersectionObserver(es=>es.forEach(e=>e.isIntersecting&&renderPage(e.target,pdf)),{root:V,rootMargin:"900px"});
+  for(let n=1;n<=pdf.numPages;n++){const d=document.createElement("div");d.className="page";d.dataset.n=n;d.style.width=vp.width+"px";d.style.height=vp.height+"px";
+    const h=document.createElement("div");h.className="hlLayer";d.appendChild(h);V.appendChild(d);ob.observe(d)}
+  hls.forEach(h=>h.rects.forEach(r=>drawRect(h,r)));
+}
+async function renderPage(div,doc){
+  if(div.dataset.done)return;div.dataset.done=1;const pg=await doc.getPage(+div.dataset.n),vp=pg.getViewport({scale:SCALE}),dpr=devicePixelRatio||1;
+  div.style.width=vp.width+"px";div.style.height=vp.height+"px";const c=document.createElement("canvas");
+  c.width=vp.width*dpr;c.height=vp.height*dpr;c.style.width=vp.width+"px";c.style.height=vp.height+"px";div.appendChild(c);
+  await pg.render({canvasContext:c.getContext("2d"),viewport:vp,transform:dpr!==1?[dpr,0,0,dpr,0,0]:null}).promise;
+  const tl=document.createElement("div");tl.className="textLayer";tl.style.setProperty("--scale-factor",SCALE);div.appendChild(tl);
+  pdfjsLib.renderTextLayer({textContentSource:await pg.getTextContent(),container:tl,viewport:vp,textDivs:[]});
+}
+const openPanel=()=>document.body.classList.add("panel");
+function closePanel(){document.body.classList.remove("panel");if(ctrl)ctrl.abort()}
+$("close").onclick=closePanel;
+function showTab(t){const c=t==="c";$("paneExplain").hidden=c;$("paneChat").hidden=!c;$("tabE").classList.toggle("on",!c);$("tabC").classList.toggle("on",c)}
+$("tabE").onclick=()=>showTab("e");$("tabC").onclick=()=>{showTab("c");$("chatIn").focus()};
+$("chatBtn").onclick=()=>{if(document.body.classList.contains("panel")&&!$("paneChat").hidden)closePanel();else{openPanel();showTab("c");$("chatIn").focus()}};
+function visiblePage(){const y=V.scrollTop+120;for(const p of V.children)if(p.offsetTop+p.offsetHeight>y)return+p.dataset.n;return 1}
+
+/* ---------- text rendering: key words, bullets, markdown, math ---------- */
+const TOK=/\{\{(.+?)\}\}|\$(?!\s)([^$\n]*?[^$\s])\$|\\\((.+?)\\\)|\*\*(.+?)\*\*|`([^`\n]+)`|(?<![*\w])\*([^*\s][^*\n]*?)\*(?![*\w])/;
+function math(t){const s=document.createElement("span");if(window.katex){try{s.innerHTML=katex.renderToString(t,{throwOnError:false});return s}catch{}}s.textContent=t;return s}
+function inline(el,text){const re=new RegExp(TOK.source,"g");let last=0,m;
+  while((m=re.exec(text))){if(m.index>last)el.appendChild(document.createTextNode(text.slice(last,m.index)));let n;
+    if(m[1]!==undefined){n=document.createElement("b");n.className="k";inline(n,m[1])}
+    else if(m[2]!==undefined||m[3]!==undefined)n=math(m[2]!==undefined?m[2]:m[3]);
+    else if(m[4]!==undefined){n=document.createElement("b");inline(n,m[4])}
+    else if(m[5]!==undefined){n=document.createElement("code");n.textContent=m[5]}
+    else{n=document.createElement("i");n.textContent=m[6]}
+    el.appendChild(n);last=re.lastIndex}
+  if(last<text.length)el.appendChild(document.createTextNode(text.slice(last)))}
+function renderInto(box,t){box.className="body";box.textContent="";t=t.replace(/\*\*[^*]*$/,"").replace(/\{\{[^}]*$/,"");let ul=null;
+  for(const line of t.split("\n")){const m=line.match(/^\s*[-\u2022*]\s+(.*)/);
+    if(m){if(!ul){ul=document.createElement("ul");box.appendChild(ul)}const li=document.createElement("li");inline(li,m[1]);ul.appendChild(li)}
+    else if(line.trim()){ul=null;const p=document.createElement("p");inline(p,line.trim());box.appendChild(p)}}}
+const split=t=>{const i=t.indexOf("[[EXPERT]]"),c=s=>s.replace(/\[\[ELI5\]\]/,"").replace(/\[{1,2}[A-Z0-9]*\]{0,2}$/,"");
+  return{eli:c(i<0?t:t.slice(0,i)),pro:i<0?"":c(t.slice(i+10))}};
+
+/* ---------- Gemini, called straight from your browser with your own key ---------- */
+const THINK=[{thinkingLevel:"minimal"},{thinkingBudget:0},null],tp={},dead={};
+const skip=(m,perm)=>Object.assign(new Error(m),{skip:true,perm});
+async function gem(system,user,max,onText,signal){
+  if(!cfg().key){showKey();throw new Error("Add your free Gemini key first (Key button).")}
+  for(const m of[...new Set([cfg().model,...FALLBACK])]){if((dead[m]||0)>Date.now())continue;
+    try{return await gemOne(m,system,user,max,onText,signal)}catch(e){if(!e.skip)throw e;if(e.perm)dead[m]=Date.now()+6e5}}
+  throw new Error("Gemini's free limit is reached for now, or the model name is outdated. Wait a minute and try again, or update the model under Key.");
+}
+async function gemOne(model,system,user,max,onText,signal){
+  const url=`https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse`;
+  const body={systemInstruction:{parts:[{text:system}]},contents:[{role:"user",parts:[{text:user}]}],generationConfig:{maxOutputTokens:max+4000}};let wait=0;
+  for(let i=0;i<8;i++){const o=tp[model]||0;if(THINK[o])body.generationConfig.thinkingConfig=THINK[o];else delete body.generationConfig.thinkingConfig;
+    const r=await fetch(url,{method:"POST",signal,headers:{"Content-Type":"application/json","x-goog-api-key":cfg().key},body:JSON.stringify(body)});
+    if(r.status===404)throw skip(model+" not available",true);
+    if(r.status===429||r.status===503){const t=await r.text();if(r.status===429&&(!t.includes("PerMinute")||t.includes("limit: 0")))throw skip("quota",true);
+      if(++wait>3)throw skip("busy",false);await sleep(8000*wait);continue}
+    if(r.status===400){const t=await r.text();if(/think/i.test(t)&&o<2){tp[model]=o+1;continue}throw new Error("Gemini error: "+t.slice(0,200))}
+    if(r.status===401||r.status===403)throw new Error("Gemini rejected your key. Check it under Key.");
+    if(!r.ok)throw new Error("Gemini error "+r.status);
+    const rd=r.body.getReader(),dec=new TextDecoder();let buf="",out="";
+    const line=l=>{l=l.replace(/\r$/,"");if(!l.startsWith("data:"))return;let j;try{j=JSON.parse(l.slice(5).trim())}catch{return}
+      for(const c of j.candidates||[])for(const p of(c.content&&c.content.parts)||[])if(p.text){out+=p.text;onText(out)}};
+    for(;;){const{done,value}=await rd.read();if(done)break;buf+=dec.decode(value,{stream:true});let k;while((k=buf.indexOf("\n"))>=0){line(buf.slice(0,k));buf=buf.slice(k+1)}}
+    if(buf)line(buf);if(!out)throw new Error("Gemini returned no answer (the text may have been blocked).");return out}
+  throw skip("too many retries",false);
+}
+/* the whole document is sent when it fits; for very long books: the start plus the pages around the passage */
+function docContext(n){const P=cur&&cur.pages||[],t=i=>`[Page ${i+1}]\n${P[i]}`,full=P.map((_,i)=>t(i)).join("\n\n");if(full.length<=FULL)return full;
+  const a=Math.max(0,n-16),b=Math.min(P.length,n+15);return full.slice(0,40000)+"\n\n[... pages skipped ...]\n\n"+P.slice(a,b).map((_,i)=>t(a+i)).join("\n\n")}
+const RULES="You help a linguist read a book or paper. You are given a passage the reader highlighted. No preamble, no lead-in phrases, no filler words. Write any math in LaTeX inside single dollar signs, e.g. $\\phi$ or $x_i^2$, never as a bare command outside dollar signs.";
+const TASK="Reply in exactly this format, with nothing before or after it:\n[[ELI5]]\nA plain-language gloss for a linguist, not a layman: one or two short sentences (35 words at most), everyday wording, field terms allowed where they are the natural word, no pile-up of jargon. Start with one fitting emoji and wrap the one to three most important words in {{double curly braces}}.\n[[EXPERT]]\nThe expert reading, for a linguist. Two or three points, each starting with '- ' and developed in two or three sentences. Keep only the essential idea of the passage and go deeper on it: the mechanism or argument, what it presupposes or implies, how it connects to the wider debate or to the document as a whole, and any tension or limitation worth noticing. Be insightful, not descriptive: never restate the passage. Together the expert points should run somewhat longer than the passage itself. Wrap the key term or claim of each point in {{double curly braces}}. Leave out secondary details; the reader will ask in chat if they want them.";
+const CHAT="You are a linguistics tutor and reading companion for someone reading the document below. You may answer questions about (1) the passage the reader selected, (2) the document as a whole, and (3) linguistics in general, even beyond this document. If a question is neither about the document nor about linguistics, say in one sentence that you can only help with the document and linguistics, and offer a linguistics angle if there is one. Be accurate and concise: short paragraphs or terse '- ' bullets, no filler. Say plainly when you are unsure or when something is not in the document. Use **bold** for key terms sparingly. Write math in LaTeX inside single dollar signs. Never invent quotes or page numbers.";
+const friendly=m=>/rejected|key/i.test(m)?m:m;
+
+/* ---------- explain ---------- */
+async function explain(text,page){
+  openPanel();showTab("e");setCtx(text,page);const eli=$("eliBody"),pro=$("proBody");
+  if(ctrl)ctrl.abort();ctrl=new AbortController();const sig=ctrl.signal;
+  eli.className="body muted";eli.textContent="Thinking...";pro.className="body muted";pro.textContent="Writing the expert explanation...";
+  try{await gem(RULES+"\n\n"+TASK+"\n\nDOCUMENT:\n"+docContext(page),`HIGHLIGHTED PASSAGE (page ${page}):\n${text.slice(0,3000)}`,1300,o=>{
+    const s=split(o);if(s.eli.trim())renderInto(eli,s.eli);if(s.pro.trim())renderInto(pro,s.pro)},sig)}
+  catch(e){if(e.name!=="AbortError"){eli.className="body muted";eli.textContent="Error: "+e.message;pro.textContent=""}}
+}
+
+/* ---------- selection tool and highlights ---------- */
+function drawRect(h,r){const p=V.children[r.p-1];if(!p)return;const d=document.createElement("div");d.className="hl";d.dataset.id=h.id;
+  d.style.cssText=`left:${r.x*SCALE}px;top:${r.y*SCALE}px;width:${r.w*SCALE}px;height:${r.h*SCALE}px`;p.querySelector(".hlLayer").appendChild(d)}
+const saveHl=()=>LS.set("hl:"+cur.id,JSON.stringify(hls));
+function pageOfY(cy){const yy=cy-V.getBoundingClientRect().top+V.scrollTop;for(const p of V.children)if(yy>=p.offsetTop&&yy<=p.offsetTop+p.offsetHeight)return p;return null}
+function textRects(range){const root=range.commonAncestorContainer,nodes=[],out=[];if(root.nodeType===3)nodes.push(root);
+  else{const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);let n;while((n=w.nextNode()))if(range.intersectsNode(n))nodes.push(n)}
+  for(const n of nodes){const r=document.createRange();r.selectNodeContents(n);if(n===range.startContainer)r.setStart(n,range.startOffset);if(n===range.endContainer)r.setEnd(n,range.endOffset);for(const c of r.getClientRects())out.push(c)}return out}
+function selRects(range){const out=[];for(const r of textRects(range)){if(r.width<2||r.height<2)continue;const p=pageOfY(r.top+r.height/2);if(!p)continue;const pr=p.getBoundingClientRect();
+  out.push({p:+p.dataset.n,x:(r.left-pr.left)/SCALE,y:(r.top-pr.top)/SCALE,w:r.width/SCALE,h:r.height/SCALE})}return out}
+function hlAt(e){const pe=e.target.closest&&e.target.closest(".page");if(!pe)return null;const n=+pe.dataset.n,pr=pe.getBoundingClientRect(),x=(e.clientX-pr.left)/SCALE,y=(e.clientY-pr.top)/SCALE;
+  return hls.find(h=>h.rects.some(r=>r.p===n&&x>=r.x&&x<=r.x+r.w&&y>=r.y&&y<=r.y+r.h))||null}
+function showTip(rc){const t=$("tip");t.hidden=false;$("tHl").hidden=!!pending.hlId;$("tRm").hidden=!pending.hlId;const w=t.offsetWidth,h=t.offsetHeight;
+  let x=rc.left+(rc.width||0)/2-w/2;x=Math.max(8,Math.min(innerWidth-w-8,x));let y=rc.top-h-10;if(y<58)y=rc.bottom+10;t.style.left=x+"px";t.style.top=y+"px"}
+function hideTip(){$("tip").hidden=true}
+function onSelect(e){const sel=getSelection(),text=sel.toString().replace(/\s+/g," ").trim();
+  if(cur&&text.length>=3&&sel.rangeCount){const range=sel.getRangeAt(0),rects=selRects(range);if(!rects.length)return hideTip();
+    pending={text,page:rects[0].p,rects,hlId:null};showTip(range.getBoundingClientRect())}
+  else if(e){const h=cur&&hlAt(e);if(h){pending={text:h.text,page:h.rects[0].p,hlId:h.id};showTip({left:e.clientX,width:0,top:e.clientY,bottom:e.clientY})}else hideTip()}}
+V.addEventListener("mousedown",()=>{md=true;hideTip()});document.addEventListener("mouseup",()=>{md=false});V.addEventListener("scroll",hideTip);
+V.addEventListener("mouseup",e=>setTimeout(()=>onSelect(e),30));
+let st;document.addEventListener("selectionchange",()=>{clearTimeout(st);st=setTimeout(()=>{if(!md)onSelect(null)},800)});   /* touch screens */
+$("tip").addEventListener("mousedown",e=>e.preventDefault());
+$("tEx").onclick=()=>{const p=pending;hideTip();if(p)explain(p.text,p.page)};
+$("tHl").onclick=()=>{if(pending&&pending.rects){const h={id:Date.now().toString(36),text:pending.text,rects:pending.rects};hls.push(h);saveHl();h.rects.forEach(r=>drawRect(h,r));getSelection().removeAllRanges()}hideTip()};
+$("tRm").onclick=()=>{if(pending&&pending.hlId){hls=hls.filter(h=>h.id!==pending.hlId);saveHl();V.querySelectorAll(`.hl[data-id="${pending.hlId}"]`).forEach(x=>x.remove())}hideTip()};
+$("tAsk").onclick=()=>{const p=pending;hideTip();if(p){openPanel();showTab("c");setCtx(p.text,p.page);$("chatIn").focus()}};
+document.addEventListener("keydown",e=>{if(e.key==="Escape"){hideTip();closePanel()}});
+
+/* ---------- chat ---------- */
+function setCtx(t,p){ctx={text:t,page:p};renderCtx()}
+function renderCtx(){$("ctxChip").hidden=!ctx;if(ctx)$("ctxText").textContent=`Page ${ctx.page}: \u201C${ctx.text.slice(0,90)}${ctx.text.length>90?"\u2026":""}\u201D`}
+$("ctxX").onclick=()=>{ctx=null;renderCtx()};
+function bubble(role,text){const b=document.createElement("div");b.className="msg "+(role==="user"?"u":"a");
+  if(role==="user")b.textContent=text;else{const i=document.createElement("div");renderInto(i,text);b.appendChild(i)}$("chatLog").appendChild(b);$("chatLog").scrollTop=1e9;return b}
+function renderChat(){const l=$("chatLog");l.textContent="";if(!chat.length){const h=document.createElement("div");h.className="hint";
+  h.textContent="Ask about the text you selected, about the whole document, or about anything in linguistics.";l.appendChild(h)}for(const m of chat)bubble(m.role,m.content)}
+async function sendChat(){const inp=$("chatIn"),msg=inp.value.trim();if(!msg||busy)return;inp.value="";const hist=chat.slice(-8);
+  if(!chat.length)$("chatLog").textContent="";chat.push({role:"user",content:msg});bubble("user",msg);
+  const box=bubble("assistant","").firstChild;box.className="body muted";box.textContent="Thinking...";busy=true;
+  const n=ctx?ctx.page:visiblePage(),convo=hist.map(m=>(m.role==="user"?"Reader: ":"Assistant: ")+m.content.slice(0,2000)).join("\n");
+  const user=(ctx?`Passage the reader selected (page ${ctx.page}):\n${ctx.text.slice(0,3000)}\n\n`:"")+(convo?`Conversation so far:\n${convo}\n\n`:"")+"Reader's new message:\n"+msg.slice(0,3000);
+  try{const out=await gem(CHAT+"\n\nDOCUMENT:\n"+(cur?docContext(n):"(no document is open)"),user,900,o=>{renderInto(box,o);$("chatLog").scrollTop=1e9});chat.push({role:"assistant",content:out})}
+  catch(e){box.className="body muted";box.textContent="Error: "+e.message}busy=false}
+$("chatSend").onclick=sendChat;$("chatIn").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendChat()}});
+
+/* ---------- key setup ---------- */
+function showKey(){$("key").value=cfg().key;$("model").value=cfg().model;$("modal").hidden=false}
+$("keyBtn").onclick=showKey;$("closeKey").onclick=()=>{$("modal").hidden=true};
+$("saveKey").onclick=()=>{LS.set("gkey",$("key").value.trim());LS.set("gmodel",$("model").value.trim()||"gemini-3.5-flash-lite");Object.keys(dead).forEach(k=>delete dead[k]);$("modal").hidden=true};
+refreshLib();renderChat();if(!cfg().key)showKey();
+</script>
+</body>
+</html>
