@@ -16,7 +16,17 @@ function normalizeIdentifier(value: string): string {
     .trim()
     .replace(/^https?:\/\/(dx\.)?doi\.org\//i, '')
     .replace(/^doi:/i, '')
+    .replace(/^isbn:/i, '')
     .trim();
+}
+
+function looksLikeDoi(value: string): boolean {
+  return /^10\.\d{4,9}\//.test(value) || /^10\./.test(value);
+}
+
+function looksLikeIsbn(value: string): boolean {
+  const digits = value.replace(/[^0-9xX]/g, '');
+  return digits.length >= 10 && digits.length <= 13;
 }
 
 function toAuthors(rawAuthors: Array<{ family?: string; given?: string; name?: string }> = []): Reference['authors'] {
@@ -37,18 +47,29 @@ function toAuthors(rawAuthors: Array<{ family?: string; given?: string; name?: s
 }
 
 async function fetchJson<T>(url: string): Promise<T> {
-  const response = await fetch(url, { headers: { Accept: 'application/json' } });
-  if (!response.ok) {
-    throw new Error(`Request failed with status ${response.status}`);
+  try {
+    const response = await fetch(url, { headers: { Accept: 'application/json' } });
+    if (!response.ok) {
+      throw new Error(`Request failed with status ${response.status}`);
+    }
+    return response.json() as Promise<T>;
+  } catch (error) {
+    if (error instanceof Error && /^Request failed with status/.test(error.message)) {
+      throw new Error('No metadata was found for that DOI or ISBN. Please check the value or enter it manually.');
+    }
+    throw new Error('Metadata lookup failed. Please check the DOI or ISBN and try again.');
   }
-  return response.json() as Promise<T>;
 }
 
 export async function lookupReferenceMetadata(input: string): Promise<MetadataLookupResult> {
   const identifier = normalizeIdentifier(input);
   if (!identifier) throw new Error('Please enter a DOI or ISBN first.');
 
-  if (/^10\.\d{4,9}\//.test(identifier) || /^10\./.test(identifier)) {
+  if (!looksLikeDoi(identifier) && !looksLikeIsbn(identifier)) {
+    throw new Error('That does not look like a valid DOI or ISBN. Please check the value and try again.');
+  }
+
+  if (looksLikeDoi(identifier)) {
     const data = await fetchJson<{ message?: any }>(`https://api.crossref.org/works/${encodeURIComponent(identifier)}`);
     const message = data.message || {};
     const authors = toAuthors(message.author || []);

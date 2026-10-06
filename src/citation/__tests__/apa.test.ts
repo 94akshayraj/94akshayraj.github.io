@@ -5,6 +5,7 @@ import {
   generateApaNarrative,
   formatAuthors,
 } from '../apa';
+import { lookupReferenceMetadata } from '../../services/metadataLookup';
 
 describe('APA 7 citation engine', () => {
   it('formats a single author correctly', () => {
@@ -210,5 +211,9 @@ describe('APA 7 citation engine', () => {
       { firstName: 'Grace', lastName: 'Hopper' },
       { firstName: 'Alan', lastName: 'Turing' },
     ])).toContain('Lovelace, A.,');
+  });
+
+  it('rejects invalid DOI input with a user-safe message', async () => {
+    await expect(lookupReferenceMetadata('not-a-doi')).rejects.toThrow('valid DOI or ISBN');
   });
 });
