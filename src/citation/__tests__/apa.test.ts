@@ -4,6 +4,7 @@ import {
   generateApaInText,
   generateApaNarrative,
   formatAuthors,
+  parseApaBookCitation,
 } from '../apa';
 import { lookupReferenceMetadata } from '../../services/metadataLookup';
 
@@ -211,6 +212,16 @@ describe('APA 7 citation engine', () => {
       { firstName: 'Grace', lastName: 'Hopper' },
       { firstName: 'Alan', lastName: 'Turing' },
     ])).toContain('Lovelace, A.,');
+  });
+
+  it('parses a single APA 7 book citation pasted from Scribbr', () => {
+    const parsed = parseApaBookCitation('Miller, A. L. (2013). The social web: How the internet is transforming society. Penguin.');
+
+    expect(parsed.type).toBe('book');
+    expect(parsed.title).toBe('The social web: How the internet is transforming society');
+    expect(parsed.year).toBe('2013');
+    expect(parsed.publisher).toBe('Penguin');
+    expect(parsed.authors?.[0]).toMatchObject({ firstName: 'A. L.', lastName: 'Miller' });
   });
 
   it('rejects invalid DOI input with a user-safe message', async () => {

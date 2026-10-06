@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { db, getReferenceById, saveReference } from '../db/indexedDb';
 import type { Reference, ReferenceType } from '../models/types';
+import { parseApaBookCitation } from '../citation/apa';
 import { lookupReferenceMetadata } from '../services/metadataLookup';
 import { randomId } from '../utils/helpers';
 
@@ -47,6 +48,8 @@ export function ReferenceFormPage({ onRefresh }: ReferenceFormPageProps) {
   const [file, setFile] = useState<File | null>(null);
   const [statusMessage, setStatusMessage] = useState('');
   const [isLookingUp, setIsLookingUp] = useState(false);
+  const [isCitationDialogOpen, setIsCitationDialogOpen] = useState(false);
+  const [citationText, setCitationText] = useState('');
 
   useEffect(() => {
     const load = async () => {
@@ -131,6 +134,34 @@ export function ReferenceFormPage({ onRefresh }: ReferenceFormPageProps) {
     }
   };
 
+  const applyParsedCitation = () => {
+    if (!citationText.trim()) {
+      setStatusMessage('Paste a full APA 7 book citation first.');
+      return;
+    }
+
+    try {
+      const parsed = parseApaBookCitation(citationText);
+      setReference((current) => ({
+        ...current,
+        type: 'book',
+        sourceType: 'book',
+        title: parsed.title || current.title,
+        authors: parsed.authors && parsed.authors.length ? parsed.authors : current.authors,
+        year: parsed.year || current.year,
+        publisher: parsed.publisher || current.publisher,
+        doi: parsed.doi || current.doi,
+        url: parsed.url || current.url,
+        edition: parsed.edition || current.edition,
+      }));
+      setStatusMessage('Book metadata filled from the APA 7 citation.');
+      setIsCitationDialogOpen(false);
+      setCitationText('');
+    } catch (error) {
+      setStatusMessage(error instanceof Error ? error.message : 'Please paste a valid APA 7 book citation.');
+    }
+  };
+
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     const finalReference: Reference = {
@@ -181,6 +212,12 @@ export function ReferenceFormPage({ onRefresh }: ReferenceFormPageProps) {
       </header>
 
       <form className="reference-form" onSubmit={handleSubmit}>
+        <div className="toolbar-row" style={{ marginBottom: '18px' }}>
+          <button type="button" className="secondary-button" onClick={() => setIsCitationDialogOpen(true)}>
+            Paste APA 7 citation
+          </button>
+        </div>
+
         <div className="form-grid">
           <label>
             Type
@@ -301,6 +338,33 @@ export function ReferenceFormPage({ onRefresh }: ReferenceFormPageProps) {
 
         {statusMessage ? <p className="status-box">{statusMessage}</p> : null}
       </form>
+
+      {isCitationDialogOpen ? (
+        <div className="citation-dialog-overlay" onClick={() => setIsCitationDialogOpen(false)}>
+          <div className="citation-dialog" onClick={(event) => event.stopPropagation()}>
+            <div className="dialog-header">
+              <h3>Paste APA 7 book citation</h3>
+              <button type="button" className="secondary-button" onClick={() => setIsCitationDialogOpen(false)}>
+                Close
+              </button>
+            </div>
+            <textarea
+              value={citationText}
+              onChange={(event) => setCitationText(event.target.value)}
+              rows={8}
+              placeholder="Miller, A. L. (2013). The social web: How the internet is transforming society. Penguin."
+            />
+            <div className="toolbar-row">
+              <button type="button" className="primary-button" onClick={applyParsedCitation}>
+                Fill book details
+              </button>
+              <button type="button" className="secondary-button" onClick={() => setIsCitationDialogOpen(false)}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

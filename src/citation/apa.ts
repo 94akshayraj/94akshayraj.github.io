@@ -46,6 +46,83 @@ export function formatAuthors(authors: AuthorLike[] = []): string {
   return `${formatted[0]}, ${formatted[1]}, &amp; ${formatted[2]}`;
 }
 
+function parseSingleApaAuthor(authorText: string): AuthorLike {
+  const cleaned = authorText.trim();
+  if (!cleaned) return {};
+
+  if (cleaned.includes(',')) {
+    const [lastName, ...rest] = cleaned.split(',');
+    let firstName = rest.join(',').trim();
+    if (/^[A-Z](?:\.\s*[A-Z])+\.?$/i.test(firstName) && !firstName.endsWith('.')) {
+      firstName += '.';
+    }
+    return { firstName, lastName: lastName.trim() };
+  }
+
+  const words = cleaned.split(/\s+/).filter(Boolean);
+  if (words.length <= 1) {
+    return { organization: cleaned };
+  }
+
+  return {
+    firstName: words.slice(0, -1).join(' '),
+    lastName: words[words.length - 1],
+  };
+}
+
+export function parseApaBookCitation(rawCitation: string): Partial<ApaReferenceInput> {
+  const normalized = rawCitation.replace(/\s+/g, ' ').trim();
+  if (!normalized) {
+    return {};
+  }
+
+  const yearMatch = normalized.match(/\((\d{4}|n\.d\.)\)/i);
+  if (!yearMatch) {
+    throw new Error('Please paste a valid APA 7 book citation with a year in parentheses.');
+  }
+
+  const year = yearMatch[1];
+  const yearIndex = yearMatch.index ?? 0;
+  const authorText = normalized.slice(0, yearIndex).trim().replace(/,$/, '');
+  const afterYear = normalized.slice(yearIndex + yearMatch[0].length).trim().replace(/^\./, '');
+  const cleanedAfterYear = afterYear
+    .replace(/https?:\/\/[^\s]+/gi, '')
+    .replace(/doi:\s*10\.[^\s]+/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  const titleAndPublisher = cleanedAfterYear.replace(/[.]+$/, '').trim();
+  const lastPeriodIndex = titleAndPublisher.lastIndexOf('.');
+  const title = lastPeriodIndex > -1 ? titleAndPublisher.slice(0, lastPeriodIndex).trim() : titleAndPublisher;
+  const publisher = lastPeriodIndex > -1 ? titleAndPublisher.slice(lastPeriodIndex + 1).trim() : '';
+
+  const authorChunks = authorText
+    .split(/\s*(?:,\s*(?:and|&)|\s+(?:and|&))\s*/i)
+    .map((part) => part.trim())
+    .filter(Boolean);
+  const authors = authorChunks.length ? authorChunks.map(parseSingleApaAuthor) : [];
+
+  const cleanTitle = title.replace(/\s*\((?:\d+(?:st|nd|rd|th)?\s*ed\.|[A-Za-z]+\s+ed\.)\)\s*$/i, '').trim();
+  const editionMatch = title.match(/\((\d+(?:st|nd|rd|th)?\s*ed\.|[A-Za-z]+\s+ed\.)\)$/i);
+  const edition = editionMatch ? editionMatch[1].trim() : '';
+
+  const doiMatch = normalized.match(/(?:https?:\/\/doi\.org\/)?(10\.\d{4,9}\/[\w.-]+(?:\/[\w.-]+)*)/i);
+  const doi = doiMatch ? doiMatch[1].replace(/^https?:\/\/doi\.org\//i, '') : '';
+  const urlMatch = normalized.match(/https?:\/\/[^\s]+/i);
+
+  return {
+    type: 'book',
+    sourceType: 'book',
+    title: cleanTitle,
+    authors,
+    year,
+    publisher: publisher.replace(/^[.\s]+|[.\s]+$/g, ''),
+    edition,
+    doi,
+    url: urlMatch ? urlMatch[0] : '',
+  };
+}
+
 export function generateApaReference(reference: ApaReferenceInput): string {
   const title = reference.title || 'Untitled';
   const authors = reference.authors || [];
