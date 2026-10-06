@@ -80,29 +80,38 @@ export function ReadPage({ references, onRefresh }: ReadPageProps) {
 
   if (!reference) return <div className="empty-state">Reference not found.</div>;
 
-  return (
-    <div className="page-shell">
-      <header className="page-header">
-        <div>
-          <p className="eyebrow">AI PDF reader</p>
-          <h2>{reference.title}</h2>
-        </div>
-        <div className="toolbar-row">
-          <button type="button" className="secondary-button" onClick={() => window.history.back()}>Back</button>
-        </div>
-      </header>
+  const toggleFullScreen = async () => {
+    const shell = document.getElementById('library-reader-shell');
+    if (!shell) return;
 
-      {!pdfFile ? (
-        <div className="empty-state">No PDF is attached to this reference yet.</div>
-      ) : (
-        <iframe
-          ref={readerFrame}
-          className="ai-reader-frame"
-          src="../reader/?embedded=library"
-          title={`AI PDF reader: ${reference.title}`}
-          onLoad={() => setReaderLoaded(true)}
-        />
-      )}
+    if (document.fullscreenElement) {
+      await document.exitFullscreen();
+      return;
+    }
+
+    await shell.requestFullscreen();
+  };
+
+  return (
+    <div className="page-shell library-reader-page">
+      <div className="library-reader-shell" id="library-reader-shell">
+        <div className="library-reader-toolbar">
+          <button type="button" className="secondary-button" onClick={() => window.history.back()}>Back</button>
+          <button type="button" className="primary-button" onClick={() => void toggleFullScreen()}>Fullscreen</button>
+        </div>
+
+        {!pdfFile ? (
+          <div className="empty-state">No PDF is attached to this reference yet.</div>
+        ) : (
+          <iframe
+            ref={readerFrame}
+            className="ai-reader-frame"
+            src="../reader/?embedded=library"
+            title={`AI PDF reader: ${reference.title}`}
+            onLoad={() => setReaderLoaded(true)}
+          />
+        )}
+      </div>
     </div>
   );
 }
