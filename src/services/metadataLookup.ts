@@ -21,7 +21,7 @@ function normalizeIdentifier(value: string): string {
 }
 
 function looksLikeDoi(value: string): boolean {
-  return /^10\.\d{4,9}\//.test(value) || /^10\./.test(value);
+  return /^10\.\d{4,9}\/[\w.-]+$/i.test(value) || /^10\.[^\s/]+\/[\w.-]+$/i.test(value);
 }
 
 function looksLikeIsbn(value: string): boolean {
