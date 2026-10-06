@@ -73,6 +73,7 @@ function App() {
         </nav>
 
         <div className="sidebar-footer">
+          <a className="nav-link academic-site-link" href="../">← Academic website</a>
           <button type="button" className="primary-button" onClick={() => window.location.hash = '#/reference/new'}>
             + Add Reference
           </button>

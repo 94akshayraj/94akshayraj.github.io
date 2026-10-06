@@ -166,6 +166,9 @@ function showTab(t){const c=t==="c";$("paneExplain").hidden=c;$("paneChat").hidd
 $("tabE").onclick=()=>showTab("e");$("tabC").onclick=()=>{showTab("c");$("chatIn").focus()};
 $("chatBtn").onclick=()=>{if(document.body.classList.contains("panel")&&!$("paneChat").hidden)closePanel();else{openPanel();showTab("c");$("chatIn").focus()}};
 function visiblePage(){const y=V.scrollTop+120;for(const p of V.children)if(p.offsetTop+p.offsetHeight>y)return+p.dataset.n;return 1}
+function reportLibraryProgress(){if(window.parent!==window&&cur&&pdf)window.parent.postMessage({type:"library-reader-progress",page:visiblePage(),total:pdf.numPages},location.origin)}
+window.addEventListener("message",async e=>{if(e.origin!==location.origin||e.data?.type!=="library-reader-open-pdf"||!(e.data.blob instanceof Blob))return;
+  try{await openBuf(await e.data.blob.arrayBuffer(),String(e.data.filename||"Library PDF"));const n=Math.max(1,Math.min(pdf.numPages,Number(e.data.startPage)||1)),target=V.querySelector(`[data-n="${n}"]`);if(target)V.scrollTop=target.offsetTop;reportLibraryProgress()}catch(x){setStatus("Error: "+x.message)}});
 
 /* ---------- text rendering: key words, bullets, markdown, math ---------- */
 const TOK=/\{\{(.+?)\}\}|\$(?!\s)([^$\n]*?[^$\s])\$|\\\((.+?)\\\)|\*\*(.+?)\*\*|`([^`\n]+)`|(?<![*\w])\*([^*\s][^*\n]*?)\*(?![*\w])/;
@@ -250,7 +253,7 @@ function onSelect(e){const sel=getSelection(),text=sel.toString().replace(/\s+/g
   if(cur&&text.length>=3&&sel.rangeCount){const range=sel.getRangeAt(0),rects=selRects(range);if(!rects.length)return hideTip();
     pending={text,page:rects[0].p,rects,hlId:null};showTip(range.getBoundingClientRect())}
   else if(e){const h=cur&&hlAt(e);if(h){pending={text:h.text,page:h.rects[0].p,hlId:h.id};showTip({left:e.clientX,width:0,top:e.clientY,bottom:e.clientY})}else hideTip()}}
-V.addEventListener("mousedown",()=>{md=true;hideTip()});document.addEventListener("mouseup",()=>{md=false});V.addEventListener("scroll",hideTip);
+V.addEventListener("mousedown",()=>{md=true;hideTip()});document.addEventListener("mouseup",()=>{md=false});V.addEventListener("scroll",()=>{hideTip();reportLibraryProgress()});
 V.addEventListener("mouseup",e=>setTimeout(()=>onSelect(e),30));
 let st;document.addEventListener("selectionchange",()=>{clearTimeout(st);st=setTimeout(()=>{if(!md)onSelect(null)},800)});   /* touch screens */
 $("tip").addEventListener("mousedown",e=>e.preventDefault());

@@ -15,6 +15,7 @@ export function PdfReader({ reference, onProgressChange }: PdfReaderProps) {
   const [pdfDoc, setPdfDoc] = useState<any>(null);
   const [pageNumber, setPageNumber] = useState(reference.currentPage || 1);
   const [zoom, setZoom] = useState(1);
+  const [rotation, setRotation] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [totalPages, setTotalPages] = useState(reference.totalPages || 0);
   const [highlights, setHighlights] = useState<Highlight[]>([]);
@@ -57,7 +58,7 @@ export function PdfReader({ reference, onProgressChange }: PdfReaderProps) {
 
     const renderPage = async () => {
       const page = await pdfDoc.getPage(pageNumber);
-      const viewport = page.getViewport({ scale: zoom });
+      const viewport = page.getViewport({ scale: zoom, rotation: (page.rotate + rotation + 360) % 360 });
       const canvas = pageCanvas;
       const context = canvas.getContext('2d');
       canvas.width = viewport.width;
@@ -77,7 +78,7 @@ export function PdfReader({ reference, onProgressChange }: PdfReaderProps) {
     };
 
     void renderPage();
-  }, [pdfDoc, pageNumber, zoom, totalPages, onProgressChange, reference.id]);
+  }, [pdfDoc, pageNumber, zoom, rotation, totalPages, onProgressChange, reference.id]);
 
   const handleSearch = async () => {
     if (!pdfDoc || !searchQuery.trim()) return;
@@ -137,15 +138,28 @@ export function PdfReader({ reference, onProgressChange }: PdfReaderProps) {
   return (
     <div className="pdf-reader">
       <div className="reader-toolbar">
-        <button type="button" onClick={() => setPageNumber((current) => Math.max(1, current - 1))}>Previous</button>
-        <button type="button" onClick={() => setPageNumber((current) => Math.min(totalPages || current, current + 1))}>Next</button>
-        <input type="number" value={pageNumber} min={1} max={totalPages || 1} onChange={(event) => setPageNumber(Math.min(totalPages || 1, Math.max(1, Number(event.target.value))))} aria-label="Page number" />
-        <span>/ {totalPages}</span>
-        <button type="button" onClick={() => setZoom((value) => Number((value - 0.1).toFixed(2)))}>−</button>
-        <button type="button" onClick={() => setZoom((value) => Number((value + 0.1).toFixed(2)))}>+</button>
-        <button type="button" onClick={() => setZoom(1)}>Fit</button>
-        <input value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="Search PDF" aria-label="Search within PDF" />
-        <button type="button" onClick={() => void handleSearch()}>Search</button>
+        <div className="reader-control-group page-controls">
+          <button type="button" onClick={() => setPageNumber((current) => Math.max(1, current - 1))} aria-label="Previous page" title="Previous page">‹</button>
+          <label className="page-counter">
+            <input type="number" value={pageNumber} min={1} max={totalPages || 1} onChange={(event) => setPageNumber(Math.min(totalPages || 1, Math.max(1, Number(event.target.value))))} aria-label="Page number" />
+            <span>of {totalPages}</span>
+          </label>
+          <button type="button" onClick={() => setPageNumber((current) => Math.min(totalPages || current, current + 1))} aria-label="Next page" title="Next page">›</button>
+        </div>
+        <div className="reader-control-group zoom-controls">
+          <button type="button" onClick={() => setZoom((value) => Math.max(0.4, Number((value - 0.1).toFixed(2))))} aria-label="Zoom out" title="Zoom out">−</button>
+          <span>{Math.round(zoom * 100)}%</span>
+          <button type="button" onClick={() => setZoom((value) => Math.min(2.5, Number((value + 0.1).toFixed(2))))} aria-label="Zoom in" title="Zoom in">+</button>
+        </div>
+        <div className="reader-control-group rotation-controls">
+          <button type="button" onClick={() => setRotation((value) => (value + 270) % 360)} aria-label="Rotate counterclockwise" title="Rotate counterclockwise">↶</button>
+          <button type="button" onClick={() => setRotation((value) => (value + 90) % 360)} aria-label="Rotate clockwise" title="Rotate clockwise">↷</button>
+          {rotation !== 0 ? <button type="button" onClick={() => setRotation(0)} title="Reset rotation">Reset</button> : null}
+        </div>
+        <form className="reader-search" onSubmit={(event) => { event.preventDefault(); void handleSearch(); }}>
+          <input value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="Find in document" aria-label="Search within PDF" />
+          <button type="submit" aria-label="Search PDF">Find</button>
+        </form>
       </div>
 
       <div className="pdf-stage" ref={containerRef} onMouseUp={handleTextSelection}>
