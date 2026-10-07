@@ -24,7 +24,7 @@ export function PdfReader({ reference, onProgressChange }: PdfReaderProps) {
 
   useEffect(() => {
     const loadPdf = async () => {
-      const pdfRecord = await getPdfRecordForReference(reference.id);
+      const pdfRecord = await getPdfRecordForReference(reference.id, reference.pdfId);
       if (!pdfRecord || !pdfRecord.data) {
         setPdfDoc(null);
         return;

@@ -35,7 +35,7 @@ export function ReadPage({ references, onRefresh }: ReadPageProps) {
     setReaderLoaded(false);
     if (!reference) return () => { active = false; };
 
-    void getPdfRecordForReference(reference.id).then((record) => {
+    void getPdfRecordForReference(reference.id, reference.pdfId).then((record) => {
       if (active && record?.data) setPdfFile({ blob: record.data, filename: record.filename });
     });
     return () => { active = false; };

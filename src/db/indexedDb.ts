@@ -38,6 +38,16 @@ export async function saveReference(reference: Reference): Promise<void> {
   await db.references.put(reference);
 }
 
+export async function saveReferenceWithPdf(reference: Reference, pdf?: PDFRecord): Promise<void> {
+  await db.transaction('rw', db.references, db.pdfs, async () => {
+    if (pdf) {
+      await db.pdfs.where('referenceId').equals(reference.id).delete();
+      await db.pdfs.put(pdf);
+    }
+    await db.references.put(reference);
+  });
+}
+
 export async function deleteReference(referenceId: string): Promise<void> {
   await db.references.delete(referenceId);
   await db.pdfs.where('referenceId').equals(referenceId).delete();
@@ -70,7 +80,11 @@ export async function savePdfRecord(pdf: PDFRecord): Promise<void> {
   await db.pdfs.put(pdf);
 }
 
-export async function getPdfRecordForReference(referenceId: string): Promise<PDFRecord | undefined> {
+export async function getPdfRecordForReference(referenceId: string, pdfId?: string): Promise<PDFRecord | undefined> {
+  if (pdfId) {
+    const preferred = await db.pdfs.get(pdfId);
+    if (preferred?.referenceId === referenceId) return preferred;
+  }
   return db.pdfs.where('referenceId').equals(referenceId).first();
 }
 

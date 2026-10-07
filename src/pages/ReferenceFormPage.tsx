@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { db, getReferenceById, saveReference } from '../db/indexedDb';
-import type { Reference, ReferenceType } from '../models/types';
+import { getReferenceById, saveReferenceWithPdf } from '../db/indexedDb';
+import type { PDFRecord, Reference, ReferenceType } from '../models/types';
 import { parseApaBookCitation } from '../citation/apa';
 import { lookupReferenceMetadata } from '../services/metadataLookup';
 import { randomId } from '../utils/helpers';
@@ -47,6 +47,7 @@ export function ReferenceFormPage({ onRefresh }: ReferenceFormPageProps) {
   const [reference, setReference] = useState<Reference>(defaultReference());
   const [file, setFile] = useState<File | null>(null);
   const [statusMessage, setStatusMessage] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
   const [isLookingUp, setIsLookingUp] = useState(false);
   const [isCitationDialogOpen, setIsCitationDialogOpen] = useState(false);
   const [citationText, setCitationText] = useState('');
@@ -180,10 +181,9 @@ export function ReferenceFormPage({ onRefresh }: ReferenceFormPageProps) {
       finalReference.dateAdded = new Date().toISOString();
     }
 
-    await saveReference(finalReference);
-
+    let pdfRecord: PDFRecord | undefined;
     if (file) {
-      const pdfRecord = {
+      pdfRecord = {
         id: randomId('pdf'),
         referenceId: finalReference.id,
         filename: file.name,
@@ -192,14 +192,20 @@ export function ReferenceFormPage({ onRefresh }: ReferenceFormPageProps) {
         uploadedAt: new Date().toISOString(),
         data: file,
       };
-      await db.pdfs.put(pdfRecord);
       finalReference.pdfId = pdfRecord.id;
-      await saveReference(finalReference);
     }
 
-    setStatusMessage('Reference saved successfully.');
-    onRefresh();
-    navigate(`/reference/${finalReference.id}`);
+    try {
+      setIsSaving(true);
+      await saveReferenceWithPdf(finalReference, pdfRecord);
+      setStatusMessage('Reference saved successfully.');
+      onRefresh();
+      navigate(`/reference/${finalReference.id}`);
+    } catch (error) {
+      setStatusMessage(`Unable to save reference: ${error instanceof Error ? error.message : 'Please try again.'}`);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -332,7 +338,9 @@ export function ReferenceFormPage({ onRefresh }: ReferenceFormPageProps) {
         </div>
 
         <div className="toolbar-row">
-          <button type="submit" className="primary-button">Save reference</button>
+          <button type="submit" className="primary-button" disabled={isSaving}>
+            {isSaving ? 'Saving…' : 'Save reference'}
+          </button>
           <button type="button" className="secondary-button" onClick={() => navigate(-1)}>Cancel</button>
         </div>
 
