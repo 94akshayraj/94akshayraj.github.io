@@ -17,7 +17,11 @@ body.embedded #viewer{padding-top:18px}
 #bar{position:fixed;top:0;left:0;right:0;height:48px;z-index:5;display:flex;align-items:center;gap:8px;padding:0 12px;background:var(--chrome);border-bottom:1px solid var(--line)}
 #bar button,.btn{font:inherit;color:var(--ink);background:transparent;border:1px solid var(--line);border-radius:8px;padding:5px 11px;cursor:pointer}
 #bar button:hover,.btn:hover{background:var(--desk)}
+#bar button:disabled{opacity:.45;cursor:not-allowed}
 #bar select{font:inherit;color:var(--ink);background:transparent;border:1px solid var(--line);border-radius:8px;padding:5px 8px;max-width:30vw}
+.zoom-group{display:inline-flex;align-items:center;gap:4px;padding:2px 6px;border:1px solid var(--line);border-radius:8px;background:var(--chrome)}
+.zoom-group button{min-width:32px;padding:4px 8px}
+#zoomValue{min-width:52px;text-align:center;color:var(--mute);font-size:13px;font-weight:700}
 #status{margin-left:auto;color:var(--mute);font-size:13px}
 #viewer{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;padding:64px 24px 80px;text-align:center;transition:padding-right .25s}
 body.panel #viewer{padding-right:calc(33.333vw + 24px)}
@@ -74,6 +78,11 @@ code{font:14px ui-monospace,Consolas,monospace;background:var(--desk);padding:1p
 <header id="bar">
   <label class="btn">Open PDF<input type="file" id="file" accept="application/pdf" hidden></label>
   <select id="docs"><option value="">Library</option></select>
+  <div class="zoom-group" aria-label="Zoom controls">
+    <button id="zoomOut" type="button" title="Zoom out" aria-label="Zoom out">−</button>
+    <span id="zoomValue">100%</span>
+    <button id="zoomIn" type="button" title="Zoom in" aria-label="Zoom in">+</button>
+  </div>
   <button id="chatBtn">Chat</button><button id="theme">Day</button><button id="keyBtn">Key</button>
   <span id="status"></span>
 </header>
@@ -113,13 +122,18 @@ if (embedded) document.body.classList.add("embedded");
 const LS={get(k,d){try{const v=localStorage.getItem(k);return v===null?d:v}catch{return d}},set(k,v){try{localStorage.setItem(k,v)}catch{}}};
 const cfg=()=>({key:LS.get("gkey",""),model:LS.get("gmodel","gemini-3.5-flash-lite")});
 const FALLBACK=["gemini-3.5-flash-lite","gemini-3.1-flash-lite"],FULL=600000;
-let cur=null,pdf=null,SCALE=1.4,hls=[],pending=null,chat=[],ctx=null,busy=false,ctrl=null,md=false;
+let cur=null,pdf=null,SCALE=1.4,hls=[],pending=null,chat=[],ctx=null,busy=false,ctrl=null,md=false,zoomLocked=false;
+const MIN_SCALE=.6,MAX_SCALE=2.3,ZOOM_STEP=.15;
 const setStatus=t=>{$("status").textContent=t};
+function updateZoomUI(){const pct=Math.round(SCALE*100);$("zoomValue").textContent=`${pct}%`;$("zoomOut").disabled=SCALE<=MIN_SCALE;$("zoomIn").disabled=SCALE>=MAX_SCALE;}
+function setScale(nextScale){const clamped=Math.min(MAX_SCALE,Math.max(MIN_SCALE,nextScale));if(!pdf||clamped===SCALE)return;SCALE=Number(clamped.toFixed(2));zoomLocked=true;updateZoomUI();if(cur)layout();}
+$("zoomOut").onclick=()=>setScale(SCALE-ZOOM_STEP);$("zoomIn").onclick=()=>setScale(SCALE+ZOOM_STEP);
 
 /* ---------- theme ---------- */
 const THEMES=["day","paper","night"];
 function setTheme(t){document.body.dataset.theme=t;LS.set("theme",t);$("theme").textContent=t[0].toUpperCase()+t.slice(1)}
 setTheme(THEMES.includes(LS.get("theme","day"))?LS.get("theme","day"):"day");
+updateZoomUI();
 $("theme").onclick=()=>setTheme(THEMES[(THEMES.indexOf(document.body.dataset.theme)+1)%3]);
 
 /* ---------- storage: PDFs live in this browser (IndexedDB) ---------- */
@@ -134,7 +148,7 @@ async function extract(p){const out=[];for(let i=1;i<=p.numPages;i++){const pg=a
 async function openBuf(buf,name){
   const id=await hash(buf);let d=null;try{d=await tx("readonly",s=>s.get(id))}catch{}
   pdf=await pdfjsLib.getDocument({data:buf.slice(0)}).promise;
-  hls=JSON.parse(LS.get("hl:"+id,"[]"));chat=[];ctx=null;renderChat();renderCtx();hideTip();closePanel();
+  hls=JSON.parse(LS.get("hl:"+id,"[]"));chat=[];ctx=null;zoomLocked=false;renderChat();renderCtx();hideTip();closePanel();
   cur={id,name,pages:d?d.pages:null};await layout();document.body.classList.add("has-doc");
   if(!d){setStatus("Reading text...");const pages=await extract(pdf);cur.pages=pages;
     try{await tx("readwrite",s=>s.put({id,name,pages,blob:new Blob([buf],{type:"application/pdf"})}))}catch{}}
@@ -150,11 +164,13 @@ document.addEventListener("drop",async e=>{e.preventDefault();const f=e.dataTran
 /* ---------- viewer ---------- */
 async function layout(){
   V.innerHTML="";const first=await pdf.getPage(1),w1=first.getViewport({scale:1}).width,vw=V.clientWidth;
-  SCALE=Math.max(.6,Math.min(900,vw>1100?vw*2/3-56:vw-32)/w1);const vp=first.getViewport({scale:SCALE});
+  if(!zoomLocked){const autoScale=Math.max(MIN_SCALE,Math.min(900,vw>1100?vw*2/3-56:vw-32)/w1);SCALE=Math.max(MIN_SCALE,Math.min(MAX_SCALE,autoScale));}
+  const vp=first.getViewport({scale:SCALE});
   const ob=new IntersectionObserver(es=>es.forEach(e=>e.isIntersecting&&renderPage(e.target,pdf)),{root:V,rootMargin:"900px"});
   for(let n=1;n<=pdf.numPages;n++){const d=document.createElement("div");d.className="page";d.dataset.n=n;d.style.width=vp.width+"px";d.style.height=vp.height+"px";
     const h=document.createElement("div");h.className="hlLayer";d.appendChild(h);V.appendChild(d);ob.observe(d)}
   hls.forEach(h=>h.rects.forEach(r=>drawRect(h,r)));
+  updateZoomUI();
 }
 async function renderPage(div,doc){
   if(div.dataset.done)return;div.dataset.done=1;const pg=await doc.getPage(+div.dataset.n),vp=pg.getViewport({scale:SCALE}),dpr=devicePixelRatio||1;
