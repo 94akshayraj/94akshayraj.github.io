@@ -485,21 +485,36 @@ async function gem(system,user,max,onText,signal){
 }
 async function gemOne(model,system,user,max,onText,signal){
   const url=`https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse`;
-  const body={systemInstruction:{parts:[{text:system}]},contents:[{role:"user",parts:[{text:user}]}],generationConfig:{maxOutputTokens:max+4000}};let wait=0;
-  for(let i=0;i<8;i++){const o=tp[model]||0;if(THINK[o])body.generationConfig.thinkingConfig=THINK[o];else delete body.generationConfig.thinkingConfig;
-    const r=await fetch(url,{method:"POST",signal,headers:{"Content-Type":"application/json","x-goog-api-key":cfg().key},body:JSON.stringify(body)});
-    if(r.status===404)throw skip(model+" not available",true);
-    if(r.status===429||r.status===503){const t=await r.text();if(r.status===429&&(!t.includes("PerMinute")||t.includes("limit: 0")))throw skip("quota",true);
-      if(++wait>3)throw skip("busy",false);await sleep(8000*wait);continue}
-    if(r.status===400){const t=await r.text();if(/think/i.test(t)&&o<2){tp[model]=o+1;continue}throw new Error("Gemini error: "+t.slice(0,200))}
-    if(r.status===401||r.status===403)throw new Error("Gemini rejected your key. Check it under Key.");
-    if(!r.ok)throw new Error("Gemini error "+r.status);
-    const rd=r.body.getReader(),dec=new TextDecoder();let buf="",out="";
-    const line=l=>{l=l.replace(/\r$/,"");if(!l.startsWith("data:"))return;let j;try{j=JSON.parse(l.slice(5).trim())}catch{return}
-      for(const c of j.candidates||[])for(const p of(c.content&&c.content.parts)||[])if(p.text){out+=p.text;onText(out)}};
-    for(;;){const{done,value}=await rd.read();if(done)break;buf+=dec.decode(value,{stream:true});let k;while((k=buf.indexOf("\n"))>=0){line(buf.slice(0,k));buf=buf.slice(k+1)}}
-    if(buf)line(buf);if(!out)throw new Error("Gemini returned no answer (the text may have been blocked).");return out}
-  throw skip("too many retries",false);
+  const contents=[{role:"user",parts:[{text:user}]}],body={systemInstruction:{parts:[{text:system}]},contents,generationConfig:{maxOutputTokens:max+4000}};
+  let out="",continuations=0;
+  for(;;){
+    let wait=0,finishReason="";
+    for(let i=0;i<8;i++){const o=tp[model]||0;if(THINK[o])body.generationConfig.thinkingConfig=THINK[o];else delete body.generationConfig.thinkingConfig;
+      const r=await fetch(url,{method:"POST",signal,headers:{"Content-Type":"application/json","x-goog-api-key":cfg().key},body:JSON.stringify(body)});
+      if(r.status===404)throw skip(model+" not available",true);
+      if(r.status===429||r.status===503){const t=await r.text();if(r.status===429&&(!t.includes("PerMinute")||t.includes("limit: 0")))throw skip("quota",true);
+        if(++wait>3)throw skip("busy",false);await sleep(8000*wait);continue}
+      if(r.status===400){const t=await r.text();if(/think/i.test(t)&&o<2){tp[model]=o+1;continue}throw new Error("Gemini error: "+t.slice(0,200))}
+      if(r.status===401||r.status===403)throw new Error("Gemini rejected your key. Check it under Key.");
+      if(!r.ok)throw new Error("Gemini error "+r.status);
+      const rd=r.body.getReader(),dec=new TextDecoder();let buf="";
+      const line=l=>{l=l.replace(/\r$/,"");if(!l.startsWith("data:"))return;const data=l.slice(5).trim();if(data==="[DONE]")return;
+        let j;try{j=JSON.parse(data)}catch{throw new Error("Gemini returned an incomplete stream. Please try again.")}
+        if(j.error)throw new Error("Gemini error: "+(j.error.message||"request failed"));
+        const c=(j.candidates||[])[0];if(c?.finishReason)finishReason=c.finishReason;
+        for(const p of(c?.content?.parts||[]))if(p.text){out+=p.text;onText(out)}};
+      for(;;){const{done,value}=await rd.read();if(done)break;buf+=dec.decode(value,{stream:true});let k;while((k=buf.indexOf("\n"))>=0){line(buf.slice(0,k));buf=buf.slice(k+1)}}
+      buf+=dec.decode();if(buf)line(buf);
+      if(!out)throw new Error("Gemini returned no answer (the text may have been blocked).");
+      break}
+    if(!finishReason)throw new Error("Gemini's response ended before completion. Please try again.");
+    if(finishReason!=="MAX_TOKENS"){
+      if(finishReason!=="STOP")throw new Error("Gemini stopped before finishing ("+finishReason.toLowerCase().replaceAll("_"," ")+"). Please try again.");
+      return out}
+    if(continuations>=3)throw new Error("Gemini repeatedly reached its output limit. Please ask for a shorter answer.");
+    contents.push({role:"model",parts:[{text:out}]},{role:"user",parts:[{text:"Continue the response from exactly where it stopped. Do not repeat or summarize the preceding text."}]});
+    continuations++;
+  }
 }
 /* the whole document is sent when it fits; for very long books: the start plus the pages around the passage */
 function docContext(n){const P=cur&&cur.pages||[],t=i=>`[Page ${i+1}]\n${P[i]}`,full=P.map((_,i)=>t(i)).join("\n\n");if(full.length<=FULL)return full;
