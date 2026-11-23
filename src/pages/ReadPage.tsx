@@ -49,7 +49,7 @@ export function ReadPage({ references, onRefresh }: ReadPageProps) {
       filename: pdfFile.filename,
       startPage: reference?.currentPage || 1,
     }, window.location.origin);
-  }, [readerLoaded, pdfFile, reference?.currentPage]);
+  }, [readerLoaded, pdfFile, reference?.id]);
 
   useEffect(() => {
     const handleReaderMessage = (event: MessageEvent) => {
