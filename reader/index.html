@@ -23,8 +23,8 @@ body.embedded #viewer{padding-top:18px}
 .zoom-group button{min-width:32px;padding:4px 8px}
 #zoomValue{min-width:52px;text-align:center;color:var(--mute);font-size:13px;font-weight:700}
 #status{margin-left:auto;color:var(--mute);font-size:13px}
-#viewer{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;padding:64px 24px 80px;text-align:center;transition:padding-right .25s}
-body.panel #viewer{padding-right:calc(33.333vw + 24px)}
+#viewer{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;padding:64px 24px 80px;text-align:center;transition:right .25s}
+body.panel #viewer{right:33.333vw}
 .page{position:relative;margin:0 auto 18px;background:var(--pagebg);box-shadow:0 2px 12px rgba(0,0,0,.18)}
 .page canvas{display:block}
 body[data-theme=paper] .page canvas{filter:sepia(.3) contrast(.95)}
@@ -94,7 +94,7 @@ code{font:14px ui-monospace,Consolas,monospace;background:var(--desk);padding:1p
 #modal input{width:100%;padding:8px;margin:4px 0 10px;font-size:14px;color:var(--ink);background:var(--desk);border:1px solid var(--line);border-radius:8px}
 #modal small{color:var(--mute);display:block;margin-bottom:10px}#modal a{color:var(--accent)}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-@media(max-width:1100px){body.panel #viewer{padding-right:24px;padding-bottom:46vh}#side{top:auto;left:0;width:100%;height:44vh;border-left:0;border-top:1px solid var(--line);transform:translateY(102%)}}
+@media(max-width:1100px){body.panel #viewer{right:0;padding-bottom:46vh}#side{top:auto;left:0;width:100%;height:44vh;border-left:0;border-top:1px solid var(--line);transform:translateY(102%)}}
 @media(max-width:600px){#bar{gap:6px;padding:0 8px}#bar button,.btn{padding:5px 8px}}
 </style>
 </head>
