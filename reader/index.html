@@ -472,7 +472,7 @@ function inline(el,text){const re=new RegExp(TOK.source,"g");let last=0,m;
     else{n=document.createElement("i");n.textContent=m[6]}
     el.appendChild(n);last=re.lastIndex}
   if(last<text.length)el.appendChild(document.createTextNode(text.slice(last)))}
-function renderInto(box,t){box.className="body";box.textContent="";t=t.replace(/\*\*[^*]*$/,"").replace(/\{\{[^}]*$/,"");let ul=null;
+function renderInto(box,t,streaming=false){box.className="body";box.textContent="";if(streaming)t=t.replace(/\*\*[^*]*$/,"").replace(/\{\{[^}]*$/,"");let ul=null;
   for(const line of t.split("\n")){const m=line.match(/^\s*[-\u2022*]\s+(.*)/);
     if(m){if(!ul){ul=document.createElement("ul");box.appendChild(ul)}const li=document.createElement("li");inline(li,m[1]);ul.appendChild(li)}
     else if(line.trim()){ul=null;const p=document.createElement("p");inline(p,line.trim());box.appendChild(p)}}}
@@ -581,7 +581,7 @@ async function sendChat(){const inp=$("chatIn"),msg=inp.value.trim();if(!msg||bu
   const box=bubble("assistant","").firstChild;box.className="body muted";box.textContent="Thinking...";busy=true;
   const n=ctx?ctx.page:visiblePage(),convo=hist.map(m=>(m.role==="user"?"Reader: ":"Assistant: ")+m.content.slice(0,2000)).join("\n");
   const user=(ctx?`Passage the reader selected (page ${ctx.page}):\n${ctx.text.slice(0,3000)}\n\n`:"")+(convo?`Conversation so far:\n${convo}\n\n`:"")+"Reader's new message:\n"+msg.slice(0,3000);
-  try{const out=await gem(CHAT+"\n\nDOCUMENT:\n"+(cur?docContext(n):"(no document is open)"),user,900,o=>{renderInto(box,o);$("chatLog").scrollTop=1e9});chat.push({role:"assistant",content:out})}
+  try{const out=await gem(CHAT+"\n\nDOCUMENT:\n"+(cur?docContext(n):"(no document is open)"),user,900,o=>{renderInto(box,o,true);$("chatLog").scrollTop=1e9});renderInto(box,out);$("chatLog").scrollTop=1e9;chat.push({role:"assistant",content:out})}
   catch(e){box.className="body muted";box.textContent="Error: "+e.message}busy=false}
 $("chatSend").onclick=sendChat;$("chatIn").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendChat()}});
 
